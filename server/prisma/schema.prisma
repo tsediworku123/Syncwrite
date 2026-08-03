@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  VIEWER
+  COMMENTER
+  EDITOR
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  avatarColor  String   @default("#6366f1")
+  createdAt    DateTime @default(now())
+
+  ownedDocuments Document[]      @relation("OwnedDocuments")
+  shares         DocumentShare[]
+  versions       DocumentVersion[]
+  comments       Comment[]
+  recentOpens    RecentDocument[]
+
+  @@map("users")
+}
+
+model Document {
+  id         String   @id @default(uuid())
+  title      String   @default("Untitled Document")
+  ownerId    String
+  owner      User     @relation("OwnedDocuments", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Yjs binary state (CRDT snapshot) — source of truth for live content
+  ydocState  Bytes?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
+
+  shares     DocumentShare[]
+  versions   DocumentVersion[]
+  comments   Comment[]
+  recentOpens RecentDocument[]
+
+  @@index([ownerId])
+  @@map("documents")
+}
+
+model DocumentShare {
+  id         String   @id @default(uuid())
+  documentId String
+  userId     String
+  role       Role     @default(VIEWER)
+  createdAt  DateTime @default(now())
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, userId])
+  @@map("document_shares")
+}
+
+// Periodic immutable snapshots for version history (separate from live ydocState)
+model DocumentVersion {
+  id         String   @id @default(uuid())
+  documentId String
+  createdById String
+  snapshot   Bytes    // Yjs snapshot at this point in time
+  plainTextPreview String @db.VarChar(500)
+  createdAt  DateTime @default(now())
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdBy  User     @relation(fields: [createdById], references: [id])
+
+  @@index([documentId, createdAt])
+  @@map("document_versions")
+}
+
+model Comment {
+  id         String   @id @default(uuid())
+  documentId String
+  authorId   String
+  parentId   String?  // for replies
+  anchorFrom Int?      // char offset anchor into doc for inline comments
+  anchorTo   Int?
+  body       String
+  resolved   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  deletedAt  DateTime?
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent     Comment? @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Comment[] @relation("Replies")
+
+  @@index([documentId])
+  @@map("comments")
+}
+
+model RecentDocument {
+  id         String   @id @default(uuid())
+  userId     String
+  documentId String
+  openedAt   DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@map("recent_documents")
+}
