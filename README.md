@@ -18,7 +18,7 @@ A real-time collaborative document editor. Multiple users can write and edit doc
 ### 1. Clone the repository
 
 ```
-git clone https://github.com/tsediworku123/Syncwrite
+git clone https://github.com/tsediworku123/Syncwrite.git
 cd syncwrite
 ```
 
