@@ -18,7 +18,7 @@ A real-time collaborative document editor. Multiple users can write and edit doc
 ### 1. Clone the repository
 
 ```
-git clone <repo-url>
+git clone https://github.com/tsediworku123/Syncwrite
 cd syncwrite
 ```
 
@@ -38,7 +38,7 @@ cp .env.example .env
 Edit `server/.env`:
 
 ```
-DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/syncwrite"
+DATABASE_URL="Enter-your-URL"
 JWT_SECRET="your-secret-key-here"
 CLIENT_URL="http://localhost:5173"
 PORT=4000
